@@ -2,7 +2,6 @@ from scapy.all import sniff
 from scapy.layers.inet import IP
 import socket
 
-
 LOCAL_IP = socket.gethostbyname(socket.gethostname())
 
 def capture_traffic(target_ip):
