@@ -21,6 +21,7 @@ Windows
 ```bash
 venv\Scripts\ctivate
 ```
+
 Linux
 ```bash
 source venv/bin/activate

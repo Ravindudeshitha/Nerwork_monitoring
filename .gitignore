@@ -5,4 +5,4 @@ __pycache__/
 .vscode/   # If you are using VS Code
 .idea/     # For JetBrains IDEs
 .venv
-venv
+venv/
