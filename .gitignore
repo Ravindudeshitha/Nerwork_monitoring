@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store  # For Mac users
+.vscode/   # If you are using VS Code
+.idea/     # For JetBrains IDEs
+.venv
+venv
