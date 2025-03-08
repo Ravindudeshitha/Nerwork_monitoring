@@ -19,7 +19,7 @@ python3 -m venv venv
 - Activate vertual enviorenment
 Windows
 ```bash
-venv\Scripts\ctivate
+venv\Scripts\activate
 ```
 
 Linux
