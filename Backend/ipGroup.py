@@ -49,7 +49,7 @@ def process_packet(packet):
 def start_sniffing():
     global capturing_flag
     while capturing_flag:
-        sniff(prn=process_packet, timeout=15, store=False)
+        sniff(prn=process_packet, iface="Ethernet 2", timeout=15, store=False)
         time.sleep(1)
 
 # Function to print stats in the terminal every 15 seconds
@@ -130,3 +130,10 @@ if filtered_ip:
 st.subheader("Captured Packets")
 df_packets = pd.DataFrame(st.session_state["captured_packets"])
 st.dataframe(df_packets)
+
+
+if st.session_state["captured_packets"]:
+    st.subheader('Data Table')
+    st.write(st.session_state["captured_packets"])
+else:
+    st.write('No data added yet.')
