@@ -131,6 +131,7 @@ st.subheader("Captured Packets")
 df_packets = pd.DataFrame(st.session_state["captured_packets"])
 st.dataframe(df_packets)
 
+
 if st.session_state["captured_packets"]:
     st.subheader('Data Table')
     st.write(st.session_state["captured_packets"])
