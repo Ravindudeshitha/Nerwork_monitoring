@@ -30,8 +30,8 @@ const PCsStatus = ({
                   gap: "5px",
                 }}
               >
-                {group.map((pc) => (
-                  <PCItem pc={pc} setClicked={setClicked} />
+                {group.map((pc, index) => (
+                  <PCItem key={index} pc={pc} setClicked={setClicked} />
                 ))}
               </div>
             </div>
