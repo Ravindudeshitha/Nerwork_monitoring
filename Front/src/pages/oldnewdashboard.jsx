@@ -14,15 +14,17 @@ import PCPopupWindow from "./components/PCPopupWindow";
 import AddBlackListPopupWindow from "./AddBlackListPopupWindow";
 import UpdatePCForm from "./components/UpdatePCForm";
 
-// const mockPCsa = Array.from({ length: 100 }, (_, i) => ({
-//   id: `PC-${i + 1}`,
-//   status:
-//     Math.random() > 0.8
-//       ? "disconnected"
-//       : Math.random() > 0.6
-//       ? "restricted"
-//       : "active",
-// }));
+const mockPCsa = Array.from({ length: 100 }, (_, i) => ({
+  id: `PC-${i + 1}`,
+  status:
+    Math.random() > 0.8
+      ? "disconnected"
+      : Math.random() > 0.6
+      ? "restricted"
+      : "active",
+}));
+
+
 
 const mockNetworkActivity = [
   { ip: "lms.jfn.ac.lk", pcs: 89, usage: 75822 },
@@ -55,6 +57,8 @@ const NetworkDashboard = () => {
   const [isRunning, setIsRunning] = useState(false);
   const [timer, setTimer] = useState(0);
   const [selectedLab, setSelectedLab] = useState("All");
+  const pcsFromRedux = useSelector((state) => state.pcs.pcs);
+  const [filteredPCs, setFilteredPCs] = useState(pcsFromRedux);
   const [noOfRows, setNoOfRows] = useState(4);
   const [isModelOpen, setIsModelOpen] = useState(null);
   const [isModel2Open, setIsModel2Open] = useState(null);
@@ -62,10 +66,9 @@ const NetworkDashboard = () => {
   const [isOpenForm, setIsOpenForm] = useState(false);
   const [isPCFormOpen, setIsPCFormOpen] = useState(false);
 
-  const mockPCs = useSelector((state) => state.pcs.pcs);
-  const [filteredPCs, setFilteredPCs] = useState(mockPCs);
 
-  console.log("hello", mockPCs);
+
+  console.log("hello", mockPCsa);
 
   useEffect(() => {
     let interval;
@@ -82,37 +85,38 @@ const NetworkDashboard = () => {
   useEffect(() => {
     switch (selectedLab) {
       case "All":
-        setFilteredPCs(mockPCs);
+        setFilteredPCs(pcsFromRedux);
         setNoOfRows(4);
         break;
       case "CSL3":
-        setFilteredPCs(mockPCs.slice(0, 50));
+        setFilteredPCs(pcsFromRedux.slice(0, 50));
         setNoOfRows(2);
         break;
       case "CSL4":
-        setFilteredPCs(mockPCs.slice(50, 100));
+        setFilteredPCs(pcsFromRedux.slice(50, 100));
         setNoOfRows(2);
         break;
       case "CSL3.1":
-        setFilteredPCs(mockPCs.slice(0, 25));
+        setFilteredPCs(pcsFromRedux.slice(0, 25));
         setNoOfRows(1);
         break;
       case "CSL3.2":
-        setFilteredPCs(mockPCs.slice(25, 50));
+        setFilteredPCs(pcsFromRedux.slice(25, 50));
         setNoOfRows(1);
         break;
       case "CSL4.1":
-        setFilteredPCs(mockPCs.slice(50, 75));
+        setFilteredPCs(pcsFromRedux.slice(50, 75));
         setNoOfRows(1);
         break;
       case "CSL4.2":
-        setFilteredPCs(mockPCs.slice(75, 100));
+        setFilteredPCs(pcsFromRedux.slice(75, 100));
         setNoOfRows(1);
         break;
       default:
-        setFilteredPCs(mockPCs);
+        setFilteredPCs(pcsFromRedux);
     }
-  }, [selectedLab]);
+  }, [selectedLab, pcsFromRedux]);
+   
 
   const handleToggle = () => {
     setIsRunning(!isRunning);
@@ -169,7 +173,7 @@ const NetworkDashboard = () => {
     const currentNumber = parseInt(selectedId.replace("PC-", ""), 10);
 
     if (!isNaN(currentNumber)) {
-      const newNumber = currentNumber < 100 ? currentNumber + 1 : 1;
+      const newNumber = currentNumber < 100 ? currentNumber + 1 : 0;
       setSelectedId(`PC-${newNumber}`);
     }
   };
@@ -235,7 +239,7 @@ const NetworkDashboard = () => {
       </div>
       <div className="w-[96vw] m-auto">
         <PCsStatus
-          mockPCs={mockPCs}
+          mockPCs={pcsFromRedux}
           mockNetworkActivity={mockNetworkActivity}
           mockHighBandwidth={mockHighBandwidth}
           selectedLab={selectedLab}
@@ -314,9 +318,8 @@ const NetworkDashboard = () => {
                         <IoIosCloseCircle />
                       </button>
                       <UpdatePCForm
-                        closePopup={setIsModel2Open}
-                        selectedId={selectedId}
-                        setSelectedId={setSelectedId}
+                        selectedPC={selectedId}
+                        setSelectedPC={setSelectedId}
                       />
                     </div>
                   </div>
