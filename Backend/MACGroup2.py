@@ -10,7 +10,7 @@ capturing_flag = False
 
 data_usage = defaultdict(lambda: defaultdict(lambda: {'bytes': 0, 'ip': None}))  # Store bytes & IP
 captured_packets = []
-mac_addresses = ['72:58:0e:1e:93:de', '11:22:33:44:55:66']  # Replace with actual MAC addresses
+mac_addresses = ['72:30:6a:87:28:83', '94:e7:0b:0e:0e:43']  # Replace with actual MAC addresses
 
 if "data_usage" not in st.session_state:
     st.session_state["data_usage"] = defaultdict(lambda: defaultdict(lambda: {'bytes': 0, 'ip': None}))
@@ -51,7 +51,7 @@ def process_packet(packet):
 def start_sniffing():
     global capturing_flag
     while capturing_flag:
-        sniff(prn=process_packet, iface="Ethernet 2", timeout=15, store=False)
+        sniff(prn=process_packet, iface="Wi-Fi", timeout=15, store=False)
         time.sleep(1)
 
 def print_stats():
