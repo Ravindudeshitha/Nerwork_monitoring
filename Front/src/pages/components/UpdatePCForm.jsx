@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { updatePC } from "../../redux/pcsSlice";
+import { addMac, updatePC } from "../../redux/pcsSlice";
 
 const UpdatePCForm = ({ selectedId, setSelectedId, closePopup }) => {
   const dispatch = useDispatch();
@@ -36,13 +36,10 @@ const UpdatePCForm = ({ selectedId, setSelectedId, closePopup }) => {
     if (selectedPC) {
       // Dispatch with all form data (ip, mac, status)
       dispatch(
-        updatePC({
+        addMac({
           id: formData.id,
-          updatedData: {
-            ip: formData.ip,
-            mac: formData.mac,
-            status: formData.status,
-          },
+          mac: formData.mac,
+          // status: formData.status,
         })
       );
     }
@@ -66,7 +63,8 @@ const UpdatePCForm = ({ selectedId, setSelectedId, closePopup }) => {
   };
 
   const isFormValid = () => {
-    return isValidIP(formData.ip) && isValidMAC(formData.mac);
+    // return isValidIP(formData.ip) && isValidMAC(formData.mac);
+    return isValidMAC(formData.mac);
   };
 
   return (
@@ -79,7 +77,7 @@ const UpdatePCForm = ({ selectedId, setSelectedId, closePopup }) => {
         onSubmit={handleSubmit}
         className=" text-sm grid  pt-8 px-5 gap-y-5 text-blue-500"
       >
-        <div className="flex justify-between">
+        {/* <div className="flex justify-between">
           <label>IP Address:</label>
           <input
             type="text"
@@ -99,7 +97,7 @@ const UpdatePCForm = ({ selectedId, setSelectedId, closePopup }) => {
           <span className="text-red-500 text-xs flex justify-end">
             Invalid IP format
           </span>
-        )}
+        )} */}
 
         <div className="flex justify-between">
           <label>MAC Address:</label>
