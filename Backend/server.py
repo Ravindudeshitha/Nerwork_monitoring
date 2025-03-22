@@ -1,3 +1,632 @@
+# from flask import Flask, jsonify, request
+# import socket
+# import dns.resolver
+# import json
+# import threading
+# import time
+# import random
+# import re
+# from scapy.all import sniff, Ether, IP
+# from collections import defaultdict
+# from flask_cors import CORS
+
+# app = Flask(__name__)
+# CORS(app)
+
+# # Global storage
+# data_list = []
+# running = False
+# capturing_flag = True
+
+# MAC_FILE = 'mac_addresses.json'
+
+# # Load MAC addresses from file
+# def load_mac_addresses():
+#     try:
+#         with open(MAC_FILE, "r") as file:
+#             return json.load(file)
+#     except (FileNotFoundError, json.JSONDecodeError):
+#         return []
+
+# # Save MAC addresses to file
+# def save_mac_addresses(mac_list):
+#     with open(MAC_FILE, "w") as file:
+#         json.dump(mac_list, file, indent=4)
+
+# # Initialize MAC addresses
+# mac_addresses = load_mac_addresses()
+
+# data_usage = defaultdict(lambda: defaultdict(lambda: {'bytes': 0, 'ip': None, 'protocol': 'Unknown'}))
+# captured_packets = []
+# # mac_addresses = ['20:4e:f6:f4:a1:f3', '94:e7:0b:0e:0e:43']  # Lowercase MACs
+# domain_ips = {}
+# restricted_domain = []
+
+# # Load domain IP mappings
+# def load_domain_ips():
+#     global domain_ips
+#     try:
+#         with open('domain_ips.json', 'r') as json_file:
+#             domain_ips = json.load(json_file)
+#     except FileNotFoundError:
+#         domain_ips = {}
+
+# def process_packet(packet):
+#     global data_usage, captured_packets
+#     if packet.haslayer(Ether):
+#         src_mac = packet[Ether].src.lower()
+#         dst_mac = packet[Ether].dst.lower()
+#         size = len(packet)
+        
+#         src_ip = 'Unknown'
+#         dst_ip = 'Unknown'
+#         protocol = 'Unknown'
+        
+#         if packet.haslayer(IP):
+#             ip_layer = packet[IP]
+#             src_ip = ip_layer.src
+#             dst_ip = ip_layer.dst
+            
+#             if ip_layer.proto == 6:
+#                 protocol = "TCP"
+#             elif ip_layer.proto == 17:
+#                 protocol = "UDP"
+#             elif ip_layer.proto == 1:
+#                 protocol = "ICMP"
+#             else:
+#                 protocol = "Other-IP"
+
+#         # Update data usage for monitored MACs
+#         for mac in [src_mac, dst_mac]:
+#             if mac in mac_addresses:
+#                 target_ip = dst_ip if mac == src_mac else src_ip
+#                 data_usage[mac][target_ip]['bytes'] += size
+#                 data_usage[mac][target_ip]['ip'] = target_ip
+#                 data_usage[mac][target_ip]['protocol'] = protocol
+
+#         # Handle other traffic
+#         if src_mac not in mac_addresses and dst_mac not in mac_addresses:
+#             for ip in [src_ip, dst_ip]:
+#                 data_usage['others'][ip]['bytes'] += size
+#                 data_usage['others'][ip]['ip'] = ip
+#                 data_usage['others'][ip]['protocol'] = protocol
+
+#         # Store packet info
+#         captured_packets.append({
+#             "source_mac": src_mac,
+#             "dest_mac": dst_mac,
+#             "source_ip": src_ip,
+#             "dest_ip": dst_ip,
+#             "size": size,
+#             "protocol": protocol
+#         })
+
+# def start_sniffing():
+#     global capturing_flag
+#     while capturing_flag:
+#         sniff(prn=process_packet, iface="Wi-Fi", timeout=15, store=False)
+
+# def get_formatted_data():
+#     result = {}
+    
+#     # Add monitored MACs
+#     for mac in mac_addresses:
+#         result[mac] = {
+#             ip: details['bytes']
+#             for ip, details in data_usage[mac].items()
+#         }
+    
+#     # Add others
+#     result['others'] = {
+#         ip: details['bytes']
+#         for ip, details in data_usage['others'].items()
+#     }
+    
+#     return result
+
+# @app.route("/start", methods=["GET"])
+# def start():
+#     global running
+#     if not running:
+#         running = True
+#         threading.Thread(target=start_sniffing, daemon=True).start()
+#     return jsonify({"message": "Monitoring started!"})
+
+# @app.route("/stop", methods=["GET"])
+# def stop_monitoring():
+#     global running, capturing_flag
+#     if running:
+#         # Stop the sniffing loop
+#         capturing_flag = False
+#         running = False
+        
+#         # Let the network thread finish gracefully
+#         time.sleep(1)  
+        
+#         return jsonify({
+#             "message": "Monitoring stopped successfully!",
+#             "status": "stopped"
+#         })
+#     return jsonify({
+#         "message": "Monitoring was not running!",
+#         "status": "inactive"
+#     })
+
+# @app.route("/data", methods=["GET"])
+# def get_data():
+#     return jsonify(get_formatted_data())
+
+# # @app.route("/data/<mac_address>", methods=["GET"])
+# # def get_mac_data(mac_address):
+# #     mac_address = mac_address.lower()  # Normalize MAC address format
+
+# #     if mac_address in data_usage:
+# #         return jsonify({mac_address: data_usage[mac_address]})
+# #     else:
+# #         return jsonify({"error": "MAC address not found"}), 404
+
+# @app.route("/data/<mac_address>", methods=["GET"])
+# def get_mac_data(mac_address):
+#     mac_address = mac_address.lower()  # Normalize MAC address format
+
+#     if mac_address in data_usage:
+#         mac_data = data_usage[mac_address]
+
+#         # Calculate total data usage
+#         total_usage = sum(details["bytes"] for details in mac_data.values())
+
+#         return jsonify({
+#             mac_address: mac_data,
+#             "total_bytes": total_usage
+#         })
+#     else:
+#         return jsonify({"error": "MAC address not found"}), 404
+
+
+# @app.route("/add_mac", methods=["POST"])
+# def add_mac():
+#     new_mac = request.json.get("mac", "").lower()
+    
+#     if not new_mac:
+#         return jsonify({"error": "No MAC address provided"}), 400
+    
+#     # Validate MAC format
+#     if not re.match(r"^([0-9a-f]{2}:){5}[0-9a-f]{2}$", new_mac):
+#         return jsonify({"error": "Invalid MAC address format"}), 400
+    
+#     if new_mac not in mac_addresses:
+#         mac_addresses.append(new_mac)
+#         save_mac_addresses(mac_addresses)
+#         return jsonify({
+#             "message": f"MAC {new_mac} added successfully",
+#             "current_macs": mac_addresses
+#         })
+    
+#     return jsonify({
+#         "message": f"MAC {new_mac} already exists",
+#         "current_macs": mac_addresses
+#     })
+
+# @app.route("/macs", methods=["GET"])
+# def list_macs():
+#     return jsonify({"monitored_macs": mac_addresses})
+
+# if __name__ == "__main__":
+#     load_domain_ips()
+#     threading.Thread(target=start_sniffing, daemon=True).start()
+#     app.run(debug=True)
+
+# from flask import Flask, jsonify, request
+# import socket
+# import dns.resolver
+# import json
+# import threading
+# import time
+# import random
+# import re
+# from scapy.all import sniff, Ether, IP
+# from collections import defaultdict
+# from flask_cors import CORS
+# from scapy.all import sniff, Ether, IP, DNS, UDP
+
+# from scapy.layers.http import HTTPRequest, HTTPResponse  # Import HTTP layers
+# from scapy.all import TCP
+# # from scapy.layers.tls.record import TLS
+
+# app = Flask(__name__)
+# CORS(app)
+
+# # Global storage
+# data_list = []
+# running = False
+# capturing_flag = True
+
+# MAC_FILE = 'mac_addresses.json'
+
+# # Load MAC addresses from file
+# def load_mac_addresses():
+#     try:
+#         with open(MAC_FILE, "r") as file:
+#             return json.load(file)
+#     except (FileNotFoundError, json.JSONDecodeError):
+#         return []
+
+# # Save MAC addresses to file
+# def save_mac_addresses(mac_list):
+#     with open(MAC_FILE, "w") as file:
+#         json.dump(mac_list, file, indent=4)
+
+# # Initialize MAC addresses
+# mac_addresses = load_mac_addresses()
+
+# data_usage = defaultdict(lambda: defaultdict(lambda: {'bytes': 0, 'ip': None, 'protocol': 'Unknown'}))
+# captured_packets = []
+# # mac_addresses = ['20:4e:f6:f4:a1:f3', '94:e7:0b:0e:0e:43']  # Lowercase MACs
+# domain_ips = {}
+# restricted_domain = []
+
+# # Load domain IP mappings
+# # def load_domain_ips():
+# #     global domain_ips
+# #     try:
+# #         with open('domain_ips.json', 'r') as json_file:
+# #             domain_ips = json.load(json_file)
+# #     except FileNotFoundError:
+# #         domain_ips = {}
+
+# # # def process_packet(packet):
+# #     global data_usage, captured_packets
+# #     if packet.haslayer(Ether):
+# #         src_mac = packet[Ether].src.lower()
+# #         dst_mac = packet[Ether].dst.lower()
+# #         size = len(packet)
+        
+# #         src_ip = 'Unknown'
+# #         dst_ip = 'Unknown'
+# #         protocol = 'Unknown'
+        
+# #         if packet.haslayer(IP):
+# #             ip_layer = packet[IP]
+# #             src_ip = ip_layer.src
+# #             dst_ip = ip_layer.dst
+            
+# #             if ip_layer.proto == 6:
+# #                 protocol = "TCP"
+# #             elif ip_layer.proto == 17:
+# #                 protocol = "UDP"
+# #             elif ip_layer.proto == 1:
+# #                 protocol = "ICMP"
+# #             else:
+# #                 protocol = "Other-IP"
+
+# #         # Update data usage for monitored MACs
+# #         for mac in [src_mac, dst_mac]:
+# #             if mac in mac_addresses:
+# #                 target_ip = dst_ip if mac == src_mac else src_ip
+# #                 data_usage[mac][target_ip]['bytes'] += size
+# #                 data_usage[mac][target_ip]['ip'] = target_ip
+# #                 data_usage[mac][target_ip]['protocol'] = protocol
+
+# #         # Handle other traffic
+# #         if src_mac not in mac_addresses and dst_mac not in mac_addresses:
+# #             for ip in [src_ip, dst_ip]:
+# #                 data_usage['others'][ip]['bytes'] += size
+# #                 data_usage['others'][ip]['ip'] = ip
+# #                 data_usage['others'][ip]['protocol'] = protocol
+
+# #         # Store packet info
+# #         captured_packets.append({
+# #             "source_mac": src_mac,
+# #             "dest_mac": dst_mac,
+# #             "source_ip": src_ip,
+# #             "dest_ip": dst_ip,
+# #             "size": size,
+# #             "protocol": protocol
+# #         })
+
+
+# def save_domain_ips():
+#     with open('domain_ips.json', 'w') as f:
+#         json.dump(domain_ips, f, indent=4)
+
+# def load_domain_ips():
+#     global domain_ips
+#     try:
+#         with open('domain_ips.json', 'r') as json_file:
+#             domain_ips = json.load(json_file)
+#     except (FileNotFoundError, json.JSONDecodeError):
+#         domain_ips = {}
+
+# # def process_packet(packet):
+# #     global data_usage, captured_packets, domain_ips
+# #     if packet.haslayer(Ether):
+# #         src_mac = packet[Ether].src.lower()
+# #         dst_mac = packet[Ether].dst.lower()
+# #         size = len(packet)
+        
+# #         src_ip = 'Unknown'
+# #         dst_ip = 'Unknown'
+# #         protocol = 'Unknown'
+        
+# #         if packet.haslayer(IP):
+# #             ip_layer = packet[IP]
+# #             src_ip = ip_layer.src
+# #             dst_ip = ip_layer.dst
+            
+# #             if ip_layer.proto == 6:
+# #                 protocol = "TCP"
+# #             elif ip_layer.proto == 17:
+# #                 protocol = "UDP"
+# #             elif ip_layer.proto == 1:
+# #                 protocol = "ICMP"
+# #             else:
+# #                 protocol = "Other-IP"
+
+# #         # Process DNS responses to map domains to IPs
+# #         if packet.haslayer(DNS) and packet.haslayer(UDP):
+# #             dns = packet[DNS]
+# #             if dns.qr == 1:  # DNS response
+# #                 for answer in dns.an:
+# #                     if answer.type == 1:  # A record
+# #                         domain = answer.rrname.decode('utf-8').rstrip('.').lower()
+# #                         ip = answer.rdata
+# #                         if isinstance(ip, str):
+# #                             domain_ips[ip] = domain
+# #                             save_domain_ips()  # Save after update
+
+# #         # Update data usage for monitored MACs
+# #         for mac in [src_mac, dst_mac]:
+# #             if mac in mac_addresses:
+# #                 target_ip = dst_ip if mac == src_mac else src_ip
+# #                 data_usage[mac][target_ip]['bytes'] += size
+# #                 data_usage[mac][target_ip]['protocol'] = protocol
+
+# #         # Handle other traffic
+# #         if src_mac not in mac_addresses and dst_mac not in mac_addresses:
+# #             for ip in [src_ip, dst_ip]:
+# #                 data_usage['others'][ip]['bytes'] += size
+# #                 data_usage['others'][ip]['protocol'] = protocol
+
+# #         # Store packet info
+# #         captured_packets.append({
+# #             "source_mac": src_mac,
+# #             "dest_mac": dst_mac,
+# #             "source_ip": src_ip,
+# #             "dest_ip": dst_ip,
+# #             "size": size,
+# #             "protocol": protocol
+# #         })
+        
+        
+# def process_packet(packet):
+#     global data_usage, captured_packets, domain_ips
+
+#     if packet.haslayer(Ether):
+#         src_mac = packet[Ether].src.lower()
+#         dst_mac = packet[Ether].dst.lower()
+#         size = len(packet)
+        
+#         src_ip = 'Unknown'
+#         dst_ip = 'Unknown'
+#         protocol = 'Unknown'
+
+#         if packet.haslayer(IP):
+#             ip_layer = packet[IP]
+#             src_ip = ip_layer.src
+#             dst_ip = ip_layer.dst
+            
+#             if packet.haslayer(TCP):
+#                 tcp_layer = packet[TCP]
+#                 if tcp_layer.dport == 80 or tcp_layer.sport == 80:
+#                     protocol = "HTTP"
+#                 elif tcp_layer.dport == 443 or tcp_layer.sport == 443:
+#                     protocol = "HTTPS"
+#                 else:
+#                     return  # Ignore non-HTTP/HTTPS traffic
+
+#         # Store HTTP request details if available
+#         http_info = None
+#         if packet.haslayer(HTTPRequest):
+#             http_layer = packet[HTTPRequest]
+#             http_info = {
+#                 "method": http_layer.Method.decode() if http_layer.Method else "UNKNOWN",
+#                 "host": http_layer.Host.decode() if http_layer.Host else "UNKNOWN",
+#                 "path": http_layer.Path.decode() if http_layer.Path else "UNKNOWN"
+#             }
+        
+#         # Store packet information
+#         captured_packets.append({
+#             "source_mac": src_mac,
+#             "dest_mac": dst_mac,
+#             "source_ip": src_ip,
+#             "dest_ip": dst_ip,
+#             "size": size,
+#             "protocol": protocol,
+#             "http_info": http_info
+#         })
+
+#         # Update data usage
+#         for mac in [src_mac, dst_mac]:
+#             if mac in mac_addresses:
+#                 target_ip = dst_ip if mac == src_mac else src_ip
+#                 data_usage[mac][target_ip]['bytes'] += size
+#                 data_usage[mac][target_ip]['protocol'] = protocol
+
+#         # Store domain info
+#         if src_ip not in domain_ips:
+#             domain_ips[src_ip] = http_info['host'] if http_info and 'host' in http_info else None
+#         if dst_ip not in domain_ips:
+#             domain_ips[dst_ip] = http_info['host'] if http_info and 'host' in http_info else None
+        
+#         save_domain_ips()
+
+
+# def start_sniffing():
+#     global capturing_flag
+#     while capturing_flag:
+#         sniff(prn=process_packet, iface="Wi-Fi", timeout=15, store=False)
+
+# # def get_formatted_data():
+# #     result = {}
+    
+# #     # Add monitored MACs
+# #     for mac in mac_addresses:
+# #         result[mac] = {
+# #             ip: details['bytes']
+# #             for ip, details in data_usage[mac].items()
+# #         }
+    
+# #     # Add others
+# #     result['others'] = {
+# #         ip: details['bytes']
+# #         for ip, details in data_usage['others'].items()
+# #     }
+    
+# #     return result
+
+
+# def get_formatted_data():
+#     result = {}
+    
+#     # Add monitored MACs
+#     for mac in mac_addresses:
+#         result[mac] = {}
+#         for ip, details in data_usage[mac].items():
+#             domain = domain_ips.get(ip, None)
+#             result[mac][ip] = {
+#                 'bytes': details['bytes'],
+#                 'domain': domain,
+#                 'protocol': details['protocol']
+#             }
+    
+#     # Add others
+#     result['others'] = {}
+#     for ip, details in data_usage['others'].items():
+#         domain = domain_ips.get(ip, None)
+#         result['others'][ip] = {
+#             'bytes': details['bytes'],
+#             'domain': domain,
+#             'protocol': details['protocol']
+#         }
+    
+#     return result
+
+# @app.route("/start", methods=["GET"])
+# def start():
+#     global running
+#     if not running:
+#         running = True
+#         threading.Thread(target=start_sniffing, daemon=True).start()
+#     return jsonify({"message": "Monitoring started!"})
+
+# @app.route("/stop", methods=["GET"])
+# def stop_monitoring():
+#     global running, capturing_flag
+#     if running:
+#         # Stop the sniffing loop
+#         capturing_flag = False
+#         running = False
+        
+#         # Let the network thread finish gracefully
+#         time.sleep(1)  
+        
+#         return jsonify({
+#             "message": "Monitoring stopped successfully!",
+#             "status": "stopped"
+#         })
+#     return jsonify({
+#         "message": "Monitoring was not running!",
+#         "status": "inactive"
+#     })
+
+# @app.route("/data", methods=["GET"])
+# def get_data():
+#     return jsonify(get_formatted_data())
+
+# # @app.route("/data/<mac_address>", methods=["GET"])
+# # def get_mac_data(mac_address):
+# #     mac_address = mac_address.lower()  # Normalize MAC address format
+
+# #     if mac_address in data_usage:
+# #         return jsonify({mac_address: data_usage[mac_address]})
+# #     else:
+# #         return jsonify({"error": "MAC address not found"}), 404
+
+# # @app.route("/data/<mac_address>", methods=["GET"])
+# # def get_mac_data(mac_address):
+# #     mac_address = mac_address.lower()  # Normalize MAC address format
+
+# #     if mac_address in data_usage:
+# #         mac_data = data_usage[mac_address]
+
+# #         # Calculate total data usage
+# #         total_usage = sum(details["bytes"] for details in mac_data.values())
+
+# #         return jsonify({
+# #             mac_address: mac_data,
+# #             "total_bytes": total_usage
+# #         })
+# #     else:
+# #         return jsonify({"error": "MAC address not found"}), 404
+
+# @app.route("/data/<mac_address>", methods=["GET"])
+# def get_mac_data(mac_address):
+#     mac_address = mac_address.lower()
+
+#     if mac_address in data_usage:
+#         mac_data = {}
+#         total_usage = 0
+
+#         for ip, details in data_usage[mac_address].items():
+#             domain = domain_ips.get(ip, None)
+#             mac_data[ip] = {
+#                 'bytes': details['bytes'],
+#                 'domain': domain,
+#                 'protocol': details['protocol']
+#             }
+#             total_usage += details['bytes']
+
+#         return jsonify({
+#             mac_address: mac_data,
+#             "total_bytes": total_usage
+#         })
+#     else:
+#         return jsonify({"error": "MAC address not found"}), 404
+
+
+# @app.route("/add_mac", methods=["POST"])
+# def add_mac():
+#     new_mac = request.json.get("mac", "").lower()
+    
+#     if not new_mac:
+#         return jsonify({"error": "No MAC address provided"}), 400
+    
+#     # Validate MAC format
+#     if not re.match(r"^([0-9a-f]{2}:){5}[0-9a-f]{2}$", new_mac):
+#         return jsonify({"error": "Invalid MAC address format"}), 400
+    
+#     if new_mac not in mac_addresses:
+#         mac_addresses.append(new_mac)
+#         save_mac_addresses(mac_addresses)
+#         return jsonify({
+#             "message": f"MAC {new_mac} added successfully",
+#             "current_macs": mac_addresses
+#         })
+    
+#     return jsonify({
+#         "message": f"MAC {new_mac} already exists",
+#         "current_macs": mac_addresses
+#     })
+
+# @app.route("/macs", methods=["GET"])
+# def list_macs():
+#     return jsonify({"monitored_macs": mac_addresses})
+
+# if __name__ == "__main__":
+#     load_domain_ips()
+#     threading.Thread(target=start_sniffing, daemon=True).start()
+#     app.run(debug=True)
+
 from flask import Flask, jsonify, request
 import socket
 import dns.resolver
@@ -5,233 +634,269 @@ import json
 import threading
 import time
 import random
+import re
 from scapy.all import sniff, Ether, IP
 from collections import defaultdict
-import pandas as pd
+from flask_cors import CORS
+from scapy.all import sniff, Ether, IP, DNS, UDP, TCP
+from scapy.layers.http import HTTPRequest, HTTPResponse
 
 app = Flask(__name__)
+CORS(app)
 
-# Global storage for data
+# Global storage
 data_list = []
 running = False
 capturing_flag = True
 
-data_usage = defaultdict(lambda: defaultdict(lambda: {'bytes': 0, 'ip': None}))  # Store bytes & IP
-captured_packets = []
-mac_addresses = ['92:55:26:49:f1:7c', '94:e7:0b:0e:0e:43']
-domain_ips = {} 
-restricted_domain = []
+MAC_FILE = 'mac_addresses.json'
+BLACKLIST_FILE = 'blacklist.json'
 
-# Load domain IP mappings from JSON file
+# Load MAC addresses from file
+def load_mac_addresses():
+    try:
+        with open(MAC_FILE, "r") as file:
+            return json.load(file)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return []
+
+# Save MAC addresses to file
+def save_mac_addresses(mac_list):
+    with open(MAC_FILE, "w") as file:
+        json.dump(mac_list, file, indent=4)
+
+# Initialize MAC addresses
+mac_addresses = load_mac_addresses()
+
+data_usage = defaultdict(lambda: defaultdict(lambda: {'bytes': 0, 'ip': None, 'protocol': 'Unknown'}))
+captured_packets = []
+domain_ips = {}
+
+# Blacklist management functions
+def load_blacklist():
+    try:
+        with open(BLACKLIST_FILE, 'r') as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {'domains': [], 'ips': []}
+
+def save_blacklist(blacklist):
+    with open(BLACKLIST_FILE, 'w') as f:
+        json.dump(blacklist, f, indent=4)
+
+# Load domain IP mappings
 def load_domain_ips():
     global domain_ips
     try:
         with open('domain_ips.json', 'r') as json_file:
             domain_ips = json.load(json_file)
-    except FileNotFoundError:
+    except (FileNotFoundError, json.JSONDecodeError):
         domain_ips = {}
-        
+
+def save_domain_ips():
+    with open('domain_ips.json', 'w') as f:
+        json.dump(domain_ips, f, indent=4)
+
 def process_packet(packet):
-    global data_usage, captured_packets
+    global data_usage, captured_packets, domain_ips
+
     if packet.haslayer(Ether):
-        src_mac = packet[Ether].src
-        dst_mac = packet[Ether].dst
+        src_mac = packet[Ether].src.lower()
+        dst_mac = packet[Ether].dst.lower()
         size = len(packet)
-        src_ip = packet[IP].src if packet.haslayer(IP) else 'Unknown'
-        dst_ip = packet[IP].dst if packet.haslayer(IP) else 'Unknown'
         
-        # Get protocol type (use IP layer and check its protocol field)
-        protocol = "Unknown"
+        src_ip = 'Unknown'
+        dst_ip = 'Unknown'
+        protocol = 'Unknown'
+
         if packet.haslayer(IP):
-            if packet[IP].proto == 6:
-                protocol = "TCP"
-            elif packet[IP].proto == 17:
-                protocol = "UDP"
-            elif packet[IP].proto == 1:
-                protocol = "ICMP"
-            else:
-                protocol = "Other"
-        
-        # If source MAC is in the mac_addresses list
-        if src_mac in mac_addresses:
-            # Group by src_mac, but store packet size by destination IP
-            if dst_ip not in data_usage[src_mac]:
-                data_usage[src_mac][dst_ip] = {'bytes': 0, 'protocol': protocol}
-            data_usage[src_mac][dst_ip]['bytes'] += size
-            data_usage[src_mac][dst_ip]['ip'] = dst_ip  # Storing the destination IP address
-            data_usage[src_mac][dst_ip]['protocol'] = protocol  # Save protocol type
-
-        # If destination MAC is in the mac_addresses list
-        if dst_mac in mac_addresses:
-            # Group by dst_mac, but store packet size by source IP
-            if src_ip not in data_usage[dst_mac]:
-                data_usage[dst_mac][src_ip] = {'bytes': 0, 'protocol': protocol}
-            data_usage[dst_mac][src_ip]['bytes'] += size
-            data_usage[dst_mac][src_ip]['ip'] = src_ip  # Storing the source IP address
-            data_usage[dst_mac][src_ip]['protocol'] = protocol  # Save protocol type
-
-        # If neither source nor destination MAC are in the mac_addresses list, store it under 'other'
-        if src_mac not in mac_addresses and dst_mac not in mac_addresses:
-            if src_ip not in data_usage['other']:
-                data_usage['other'][src_ip] = {'bytes': 0, 'protocol': protocol}
-            if dst_ip not in data_usage['other']:
-                data_usage['other'][dst_ip] = {'bytes': 0, 'protocol': protocol}
+            ip_layer = packet[IP]
+            src_ip = ip_layer.src
+            dst_ip = ip_layer.dst
             
-            data_usage['other'][src_ip]['bytes'] += size
-            data_usage['other'][src_ip]['ip'] = src_ip  # Storing the source IP address
-            data_usage['other'][src_ip]['protocol'] = protocol  # Save protocol type
-            data_usage['other'][dst_ip]['bytes'] += size
-            data_usage['other'][dst_ip]['ip'] = dst_ip  # Storing the destination IP address
-            data_usage['other'][dst_ip]['protocol'] = protocol  # Save protocol type
+            if packet.haslayer(TCP):
+                tcp_layer = packet[TCP]
+                if tcp_layer.dport == 80 or tcp_layer.sport == 80:
+                    protocol = "HTTP"
+                elif tcp_layer.dport == 443 or tcp_layer.sport == 443:
+                    protocol = "HTTPS"
+                else:
+                    return  # Ignore non-HTTP/HTTPS traffic
 
-        # Append the packet information for later display or analysis
+        http_info = None
+        if packet.haslayer(HTTPRequest):
+            http_layer = packet[HTTPRequest]
+            http_info = {
+                "method": http_layer.Method.decode() if http_layer.Method else "UNKNOWN",
+                "host": http_layer.Host.decode() if http_layer.Host else "UNKNOWN",
+                "path": http_layer.Path.decode() if http_layer.Path else "UNKNOWN"
+            }
+        
         captured_packets.append({
-            "Source MAC": src_mac,
-            "Source IP": src_ip,
-            "Destination MAC": dst_mac,
-            "Destination IP": dst_ip,
-            "Size": size,
-            "Protocol": protocol  # Save protocol type with packet information
+            "source_mac": src_mac,
+            "dest_mac": dst_mac,
+            "source_ip": src_ip,
+            "dest_ip": dst_ip,
+            "size": size,
+            "protocol": protocol,
+            "http_info": http_info
         })
 
+        for mac in [src_mac, dst_mac]:
+            if mac in mac_addresses:
+                target_ip = dst_ip if mac == src_mac else src_ip
+                data_usage[mac][target_ip]['bytes'] += size
+                data_usage[mac][target_ip]['protocol'] = protocol
 
+        if src_ip not in domain_ips:
+            domain_ips[src_ip] = http_info['host'] if http_info and 'host' in http_info else None
+        if dst_ip not in domain_ips:
+            domain_ips[dst_ip] = http_info['host'] if http_info and 'host' in http_info else None
+        
+        save_domain_ips()
 
 def start_sniffing():
     global capturing_flag
     while capturing_flag:
         sniff(prn=process_packet, iface="Wi-Fi", timeout=15, store=False)
-        time.sleep(1)
 
-def print_stats():
-    global capturing_flag
-    while capturing_flag:
-        time.sleep(15)
-        print("\n==== Network Traffic Stats (Last 15 sec) ====")
-        for mac, mac_data in data_usage.items():
-            if mac != 'other':
-                print(f"Group {mac}:")
-                for dst_mac, details in mac_data.items():
-                    print(f"  To {dst_mac} (IP: {details['ip']}): {details['bytes']} bytes")
-            else:
-                print("Other Group:")
-                for non_mac, details in mac_data.items():
-                    print(f"  {non_mac} (IP: {details['ip']}): {details['bytes']} bytes")
-
-        if captured_packets:
-            print("\nCaptured Packets:")
-            for pkt in captured_packets[-5:]:
-                print(f"{pkt['Source MAC']} ({pkt['Source IP']}) -> {pkt['Destination MAC']} ({pkt['Destination IP']}), Size: {pkt['Size']} bytes")
-        print("==========================================\n")
-        
-# Function to generate data in a separate thread
-def generate_data():
-    global running
-    counter = 1
-    while running:
-        new_object = {
-            "name": f"Data {counter}",
-            "mak": random.randint(1, 100),
-            "time": time.strftime("%H:%M:%S")
+def get_formatted_data():
+    result = {}
+    
+    for mac in mac_addresses:
+        result[mac] = {}
+        for ip, details in data_usage[mac].items():
+            domain = domain_ips.get(ip, None)
+            result[mac][ip] = {
+                'bytes': details['bytes'],
+                'domain': domain,
+                'protocol': details['protocol']
+            }
+    
+    result['others'] = {}
+    for ip, details in data_usage['others'].items():
+        domain = domain_ips.get(ip, None)
+        result['others'][ip] = {
+            'bytes': details['bytes'],
+            'domain': domain,
+            'protocol': details['protocol']
         }
-        data_list.append(new_object)
-        counter += 1
-        time.sleep(1)
-
-def clean_domain(url):
-    if url.startswith("https://"):
-        url = url[8:]
-    elif url.startswith("http://"):
-        url = url[7:]
-    return url.rstrip('/')
-
-# Function to get IP addresses from domain
-def get_ip_addresses(domain):
-    ip_addresses = []
-
-    try:
-        ip = socket.gethostbyname(domain)
-        ip_addresses.append(ip)
-    except socket.gaierror:
-        print(f"Could not resolve domain {domain} using socket.")
     
-    try:
-        answers = dns.resolver.resolve(domain, 'A')
-        for answer in answers:
-            ip_addresses.append(answer.to_text())
-    except dns.resolver.NoAnswer:
-        print(f"No A records found for domain {domain}.")
-    except dns.resolver.NXDOMAIN:
-        print(f"Domain {domain} does not exist.")
-    
-    return ip_addresses
+    return result
 
-# Save domain IPs to a JSON file
-def save_domain_ips():
-    with open('domain_ips.json', 'w') as json_file:
-        json.dump(domain_ips, json_file, indent=4)
-
-def get_restricted_macs(data_usage, domain_file):
-    # Load domain data from JSON file
-    with open(domain_file, 'r') as file:
-        domain_data = json.load(file)
-    
-    # Reverse map: IP -> Domain
-    ip_to_domain = {}
-    for domain, ip_list in domain_data.items():
-        for ip in ip_list:
-            ip_to_domain[ip] = domain
-    
-    restricted = {}
-    
-    # Check each MAC's data usage
-    for mac, usage_data in data_usage.items():
-        mac_domains = set()
-        for ip, details in usage_data.items():
-            if ip in ip_to_domain:
-                mac_domains.add(ip_to_domain[ip])
-        
-        if mac_domains:
-            restricted[mac] = mac_domains
-    
-    return restricted
-
-def pp():
-    domain_file = "domain_ips.json"
-    restricted_macs = get_restricted_macs(data_usage, domain_file)
-    print(restricted_macs)
-    
-# Route to submit domain and save its IPs
-@app.route("/save_domain", methods=["POST"])
-def save_domain():
-    domain = request.json.get("domain")
-    if domain:
-        cleaned_domain = clean_domain(domain)
-        ips = get_ip_addresses(cleaned_domain)
-        if ips:
-            domain_ips[cleaned_domain] = ips
-            save_domain_ips()
-            return jsonify({"message": f"IP addresses for {cleaned_domain} saved!"})
-        else:
-            return jsonify({"message": f"No IP addresses found for {cleaned_domain}."}), 404
-    return jsonify({"message": "No domain provided."}), 400
-
-
-# Route to start data generation
 @app.route("/start", methods=["GET"])
 def start():
     global running
-    
     if not running:
         running = True
         threading.Thread(target=start_sniffing, daemon=True).start()
-        threading.Thread(target=print_stats, daemon=True).start()
-    return jsonify({"message": "Data generation started!"})
+    return jsonify({"message": "Monitoring started!"})
 
-# Route to fetch data
+@app.route("/stop", methods=["GET"])
+def stop_monitoring():
+    global running, capturing_flag
+    if running:
+        capturing_flag = False
+        running = False
+        time.sleep(1)  
+        return jsonify({"message": "Monitoring stopped!", "status": "stopped"})
+    return jsonify({"message": "Not running!", "status": "inactive"})
+
 @app.route("/data", methods=["GET"])
 def get_data():
-    pp()
-    return jsonify(data_usage)
+    return jsonify(get_formatted_data())
+
+@app.route("/data/<mac_address>", methods=["GET"])
+def get_mac_data(mac_address):
+    mac_address = mac_address.lower()
+
+    if mac_address in data_usage:
+        mac_data = {}
+        total_usage = 0
+
+        for ip, details in data_usage[mac_address].items():
+            domain = domain_ips.get(ip, None)
+            mac_data[ip] = {
+                'bytes': details['bytes'],
+                'domain': domain,
+                'protocol': details['protocol']
+            }
+            total_usage += details['bytes']
+
+        return jsonify({
+            mac_address: mac_data,
+            "total_bytes": total_usage
+        })
+    else:
+        return jsonify({"error": "MAC address not found"}), 404
+
+@app.route("/add_mac", methods=["POST"])
+def add_mac():
+    new_mac = request.json.get("mac", "").lower()
+    
+    if not re.match(r"^([0-9a-f]{2}:){5}[0-9a-f]{2}$", new_mac):
+        return jsonify({"error": "Invalid MAC format"}), 400
+    
+    if new_mac not in mac_addresses:
+        mac_addresses.append(new_mac)
+        save_mac_addresses(mac_addresses)
+        return jsonify({"message": f"MAC {new_mac} added", "macs": mac_addresses})
+    
+    return jsonify({"message": f"MAC {new_mac} exists", "macs": mac_addresses})
+
+@app.route("/macs", methods=["GET"])
+def list_macs():
+    return jsonify({"monitored_macs": mac_addresses})
+
+# New endpoints for blacklist management
+@app.route("/blacklist", methods=["POST"])
+def update_blacklist():
+    data = request.get_json()
+    new_domains = [d.strip().lower() for d in data.get('domains', [])]
+    new_ips = [ip.strip() for ip in data.get('ips', [])]
+
+    blacklist = load_blacklist()
+    
+    # Merge and deduplicate
+    updated_domains = list(set(blacklist['domains'] + new_domains))
+    updated_ips = list(set(blacklist['ips'] + new_ips))
+    
+    blacklist['domains'] = updated_domains
+    blacklist['ips'] = updated_ips
+    
+    save_blacklist(blacklist)
+    return jsonify({"message": "Blacklist updated", "blacklist": blacklist})
+
+@app.route("/blacklist", methods=["GET"])
+def get_blacklist():
+    return jsonify(load_blacklist())
+
+@app.route("/check_blacklist", methods=["GET"])
+def check_blacklist_access():
+    blacklist = load_blacklist()
+    results = []
+    
+    for mac in mac_addresses:
+        flagged = False
+        if mac not in data_usage:
+            results.append({"mac": mac, "accessed_blacklist": False})
+            continue
+            
+        for ip in data_usage[mac].keys():
+            if ip in blacklist['ips']:
+                flagged = True
+                break
+            
+            domain = domain_ips.get(ip, "")
+            if domain in blacklist['domains']:
+                flagged = True
+                break
+        
+        results.append({"mac": mac, "accessed_blacklist": flagged})
+    
+    return jsonify(results)
 
 if __name__ == "__main__":
+    load_domain_ips()
+    threading.Thread(target=start_sniffing, daemon=True).start()
     app.run(debug=True)
