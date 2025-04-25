@@ -231,9 +231,7 @@ export default function NetworkDashboard() {
                 <th>Usage (KB)</th>
               </tr>
             </thead>
-            <tbody>
-              {/* Sample data for live network activity */}
-            </tbody>
+            <tbody>{/* Sample data for live network activity */}</tbody>
           </table>
         </div>
 
@@ -245,9 +243,7 @@ export default function NetworkDashboard() {
           }}
         >
           <h2>High Bandwidth Usage PCs</h2>
-          <ul>
-            {/* Sample data for high bandwidth usage */}
-          </ul>
+          <ul>{/* Sample data for high bandwidth usage */}</ul>
         </div>
       </div>
     </div>

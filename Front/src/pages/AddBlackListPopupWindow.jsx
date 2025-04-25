@@ -17,7 +17,7 @@ const AddBlackListPopupWindow = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    dispatch(addToBlackList(formData));
+    dispatch(addToBlackList(formData.dns));
     console.log("New IP Added:", formData);
     setFormData({ name: "", ipv4: "", restrictionType: "restricted" });
   };
@@ -25,7 +25,7 @@ const AddBlackListPopupWindow = () => {
   return (
     <div>
       <h1 className="text-center text-3xl font-black text-blue-500 mt-4">
-        Add IP Address
+        Add Blacklist Domain
       </h1>
 
       <form
@@ -33,7 +33,7 @@ const AddBlackListPopupWindow = () => {
         className="grid-cols-2 text-sm grid gap-y-4 pt-8 px-2 text-blue-500"
         onSubmit={handleSubmit}
       >
-        <label htmlFor="">Name (Label/Description) : </label>
+        {/* <label htmlFor="">Name (Label/Description) : </label>
         <input
           type="text"
           name="name"
@@ -41,9 +41,9 @@ const AddBlackListPopupWindow = () => {
           onChange={handleChange}
           className="border-b-2 border-blue-500"
           placeholder="Chat GPT"
-        />
+        /> */}
 
-        <label htmlFor="">IP Address : </label>
+        {/* <label htmlFor="">IP Address : </label>
         <input
           name="ipv4"
           value={formData.ipv4}
@@ -51,7 +51,7 @@ const AddBlackListPopupWindow = () => {
           type="text"
           className="border-b-2 border-blue-500"
           placeholder="194.56.78.45"
-        />
+        /> */}
 
         {/* <label htmlFor="">MAC Address : </label>
         <input
@@ -73,7 +73,7 @@ const AddBlackListPopupWindow = () => {
           placeholder="chatgpt.com"
         />
 
-        <label htmlFor="">Type of Restriction :</label>
+        {/* <label htmlFor="">Type of Restriction :</label>
         <select
           name="restrictionType"
           value={formData.restrictionType}
@@ -82,7 +82,7 @@ const AddBlackListPopupWindow = () => {
         >
           <option value="restricted">Restricted</option>
           <option value="allow">Allow</option>
-        </select>
+        </select> */}
         <div></div>
         <button
           className="bg-blue-500 text-white py-2 rounded-lg mt-10"

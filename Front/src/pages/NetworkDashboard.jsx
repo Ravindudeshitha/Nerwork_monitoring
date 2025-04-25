@@ -13,6 +13,7 @@ import { BiEditAlt } from "react-icons/bi";
 import PCPopupWindow from "./components/PCPopupWindow";
 import AddBlackListPopupWindow from "./AddBlackListPopupWindow";
 import UpdatePCForm from "./components/UpdatePCForm";
+import axios from "axios";
 
 // const mockPCsa = Array.from({ length: 100 }, (_, i) => ({
 //   id: `PC-${i + 1}`,
@@ -64,6 +65,7 @@ const NetworkDashboard = () => {
 
   const mockPCs = useSelector((state) => state.pcs.pcs);
   const [filteredPCs, setFilteredPCs] = useState(mockPCs);
+  console.log("hfoisf, : ", filteredPCs);
 
   console.log("hello", mockPCs);
 
@@ -114,7 +116,32 @@ const NetworkDashboard = () => {
     }
   }, [selectedLab]);
 
+  const [error, setError] = useState("");
+
+  const start = async () => {
+    try {
+      const response = await axios.get(`http://127.0.0.1:5000/start`);
+    } catch (err) {
+      setError("Error start");
+      console.error(err);
+    }
+  };
+
+  const stop = async () => {
+    try {
+      const response = await axios.get(`http://127.0.0.1:5000/stop`);
+    } catch (err) {
+      setError("Error stop");
+      console.error(err);
+    }
+  };
+
   const handleToggle = () => {
+    if (isRunning) {
+      stop();
+    } else {
+      start();
+    }
     setIsRunning(!isRunning);
     if (!isRunning) {
       setTimer(0); // Reset timer when starting
@@ -176,12 +203,12 @@ const NetworkDashboard = () => {
 
   return (
     <div>
-      <header className="bg-blue-700 text-white pb-1 text-center">
-        <h1 className="font-black text-3xl">Network Monitoring Dashboard</h1>
+      <header className="bg-blue-700 text-white text-center py-4">
+        <h1 className="font-black text-3xl ">Network Monitoring Dashboard</h1>
         <h2 className=" text-xl">DCS CSL3 & CSL4</h2>
       </header>
 
-      <div className="text-xl justify-between flex w-[96vw]  m-auto h-12">
+      <div className="text-xl justify-between flex w-[96vw]  m-auto  py-4 pt-10">
         <div className="ml-2 relative group  flex justify-center items-center self-center ">
           <div className="bg-blue-500 p-2 rounded-md">
             {!isRunning ? (
@@ -209,11 +236,11 @@ const NetworkDashboard = () => {
         </div>
 
         <div className="self-center">
-          <input
+          {/* <input
             type="text"
             placeholder="Find PC..."
             className="px-2 py-[1px] text-lg border-blue-500 border-4 rounded-lg mx-1"
-          />
+          /> */}
           <select
             value={selectedLab}
             onChange={(e) => setSelectedLab(e.target.value)}
@@ -233,7 +260,7 @@ const NetworkDashboard = () => {
           </button>
         </div>
       </div>
-      <div className="w-[96vw] m-auto">
+      <div className="w-[96vw] m-auto ">
         <PCsStatus
           mockPCs={mockPCs}
           mockNetworkActivity={mockNetworkActivity}
@@ -248,19 +275,16 @@ const NetworkDashboard = () => {
             <BlacklistedSites sites={blackList} />
           </div>
           <div className="col-span-2">
-            <LiveNetworkActivity activities={mockNetworkActivity} />
+            {/* <LiveNetworkActivity activities={mockNetworkActivity} /> */}
           </div>
           <div className="">
-            <HighBandwidthUsage pcs={mockHighBandwidth} />
+            {/* <HighBandwidthUsage pcs={mockHighBandwidth} /> */}
             <div className="py-2 px-14">
               <div className="flex items-center gap-4">
                 <div className="h-4 w-4 bg-red-500 rounded-full"></div>{" "}
                 <span>Restricted Activity</span>
               </div>
-              <div className="flex items-center gap-4">
-                <div className="h-4 w-4 bg-purple-500 rounded-full"></div>{" "}
-                <span>High Data Usage</span>
-              </div>
+
               <div className="flex items-center gap-4">
                 <div className="h-4 w-4 bg-green-500 rounded-full"></div>{" "}
                 <span>Active Normal Operation</span>
@@ -276,7 +300,7 @@ const NetworkDashboard = () => {
 
       {isModelOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-          <div className="relative w-1/4  border-4 border-red-500 bg-white rounded-lg pb-4">
+          <div className="relative w-1/4  border-4  bg-white rounded-lg pb-4">
             <button
               onClick={closeModal}
               className="absolute rounded-full h-6 w-6 right-2 top-1 text-red-500 text-3xl"

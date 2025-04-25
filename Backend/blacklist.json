@@ -1,4 +1,6 @@
 {
-  "domains": ["youtube.com", "chatgpt.com"],
-  "ips": [""]
+    "domains": [],
+    "ips": [
+        ""
+    ]
 }
