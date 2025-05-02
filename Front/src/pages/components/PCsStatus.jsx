@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import PCItem from "./PCItem";
+import axios from "axios";
 
 const PCsStatus = ({
   mockPCs,
@@ -8,8 +9,32 @@ const PCsStatus = ({
   selectedLab,
   filteredPCs,
   noOfRows,
-  setClicked
+  setClicked,
 }) => {
+  const [error, setError] = useState("");
+  const [macStatus, setMacStatus] = useState({});
+
+  useEffect(() => {
+    // Function to fetch data from the server
+    const fetchData = async () => {
+      // setIsLoading(true);
+      try {
+        const response = await axios.get(`http://127.0.0.1:5000/active_status`);
+        setMacStatus(response.data);
+        console.log("$$$$$$$$$$$$$$$$$$$, : ", response.data);
+        // setIsLoading(false);
+      } catch (err) {
+        setError("Error fetching data");
+        console.error(err);
+      }
+    };
+
+    fetchData();
+
+    const interval = setInterval(fetchData, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
   const renderPCsGrid = (pcs) => {
     if (selectedLab === "All") {
       const groupedPCs = [
@@ -31,7 +56,21 @@ const PCsStatus = ({
                 }}
               >
                 {group.map((pc, index) => (
-                  <PCItem key={index} pc={pc} setClicked={setClicked} />
+                  <PCItem
+                    key={index}
+                    pc={pc}
+                    setClicked={setClicked}
+                    active={
+                      macStatus[pc.mac] === undefined
+                        ? false
+                        : macStatus[pc.mac].is_active
+                    }
+                    restricted={
+                      macStatus[pc.mac] === undefined
+                        ? false
+                        : macStatus[pc.mac].accessed_blacklist
+                    }
+                  />
                 ))}
               </div>
             </div>
@@ -58,7 +97,20 @@ const PCsStatus = ({
                 }}
               >
                 {group.map((pc) => (
-                  <PCItem pc={pc} setClicked={setClicked} />
+                  <PCItem
+                    pc={pc}
+                    setClicked={setClicked}
+                    active={
+                      macStatus[pc.mac] === undefined
+                        ? false
+                        : macStatus[pc.mac].is_active
+                    }
+                    restricted={
+                      macStatus[pc.mac] === undefined
+                        ? false
+                        : macStatus[pc.mac].accessed_blacklist
+                    }
+                  />
                 ))}
               </div>
             </div>
@@ -83,16 +135,29 @@ const PCsStatus = ({
         }}
       >
         {row.map((pc) => (
-          <PCItem pc={pc} setClicked={setClicked} />
+          <PCItem
+            pc={pc}
+            setClicked={setClicked}
+            active={
+              macStatus[pc.mac] === undefined
+                ? false
+                : macStatus[pc.mac].is_active
+            }
+            restricted={
+              macStatus[pc.mac] === undefined
+                ? false
+                : macStatus[pc.mac].accessed_blacklist
+            }
+          />
         ))}
       </div>
     ));
   };
 
   return (
-    <div className="border-2 border-blue-400 w-full rounded-lg">
-      <div className="text-center">
-        <h2 className="text-lg font-bold text-blue-500">PC Status</h2>
+    <div className=" bg-slate-200 rounded-md w-full rounded-lg">
+      <div className="text-center py-4">
+        <h2 className="text-lg font-bold text-blue-500 mb-3">PC Status</h2>
         {renderPCsGrid(filteredPCs)}
       </div>
     </div>

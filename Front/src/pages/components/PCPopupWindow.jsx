@@ -65,12 +65,12 @@ const PCPopupWindow = ({ selectedId, mockNetworkActivity, openModal2 }) => {
       </div>
 
       <div className="flex justify-between mx-4 text-sm text-blue-500 border-b-4 border-blue-500 pb-2">
-        <div className="flex">
+        {/* <div className="flex">
           <p>Status : </p>
           <div className="bg-red-500 text-white px-2 pb-[2px] rounded-full justify-center ml-1">
             Unautherized
           </div>
-        </div>
+        </div> */}
         <div className="flex">
           <p>Usage (Size) : </p>
           <div>{!macData ? "" : formatBytes(macData.total_bytes)}</div>
